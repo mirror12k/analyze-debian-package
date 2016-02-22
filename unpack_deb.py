@@ -2,7 +2,7 @@
 
 
 import sys
-
+from arfile import ArFile
 
 
 
@@ -13,8 +13,9 @@ def main():
 		print ".deb package filepath required"
 	else:
 		filepath = sys.argv[1]
-		print "got file:", filepath
-
+		deb = ArFile(filepath)
+		print "files: ", deb.filenames()
+		deb.extractAll('test')
 
 if __name__ == '__main__':
 	main()
