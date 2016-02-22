@@ -50,16 +50,18 @@ class ArFile(object):
 		self.filepath = filepath
 		self.handle = open(filepath, 'rb')
 		self.fileDescriptors = []
-		self.readStructure()
+
+		self.readStructure() # read the structure of the file
 	def readStructure(self):
-		fileMagic = self.handle.read(len(self.magic))
+		fileMagic = self.handle.read(len(self.magic)).decode('ascii')
 		offset = len(self.magic)
-		if fileMagic != self.magic:
+		if fileMagic != self.magic: # verify file magic
 			raise ArFileException('invalid file magic: "'+fileMagic+'" (expected "'+ self.magic+'")')
+
 		eof = False
 		while eof is False:
 			if offset % 2 == 1: # ar file descriptors always start on an even boundary
-				padding = self.handle.read(1)
+				padding = self.handle.read(1).decode('ascii')
 				if len(padding) == 0:
 					eof = True
 				else:
@@ -80,15 +82,14 @@ class ArFile(object):
 					self.handle.seek(offset)
 
 	def readFileDescriptor(self):
-		header = self.handle.read(60)
+		header = self.handle.read(60).decode('ascii')
 		if len(header) == 0: # eof reached
 			return None
 		elif len(header) < 60: # didn't get a complete header
 			raise ArFileException('eof before complete header!')
 		else: # got a header block
-			if header[58:60] != "`\n":
-				print "debug: ", header
-				raise ArFileException('invalid file header magic: "'+header[58:60]+'"')
+			if header[58:60] != "`\n": # verify file header magic
+				raise ArFileException('invalid file header magic: "'+str(header[58:60])+'"')
 			else:
 				return ArFileDescriptor(
 					filename=header[0:16],
@@ -102,9 +103,15 @@ class ArFile(object):
 		return self.fileDescriptors
 	def filenames(self):
 		return [ desc.filename for desc in self.fileDescriptors ]
+	def descriptorFromFilename(self, filename):
+		descriptors = [ desc for desc in self.files() if desc.filename == filename ]
+		if descriptors:
+			return descriptors[0]
+		else:
+			return None
 	def extract(self, desc, path='.'):
 		filepath = path+'/'+desc.filename.replace('/', '_') # a little bit of security
-		with open(filepath, 'w') as dest:
+		with open(filepath, 'wb') as dest:
 			self.handle.seek(desc.offset)
 			bytesLeft = desc.filesize
 			while bytesLeft > 0:
